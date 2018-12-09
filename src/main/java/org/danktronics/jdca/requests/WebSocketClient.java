@@ -67,6 +67,8 @@ public class WebSocketClient {
             case "PRESENCE_UPDATE":
                 jdca.broadcastEvent(new PresenceUpdateEvent(jdca, new UserImpl(payload.getJSONObject("user"))));
                 break;
+            default:
+                jdca.broadcastEvent(new UnknownEvent(jdca, payload));
         }
     }
 
