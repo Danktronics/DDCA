@@ -1,19 +1,14 @@
 package org.danktronics.jdca.entities.impl;
 
-import com.neovisionaries.ws.client.WebSocket;
-import com.neovisionaries.ws.client.WebSocketAdapter;
 import com.neovisionaries.ws.client.WebSocketFactory;
 import okhttp3.OkHttpClient;
 import okhttp3.Response;
-import org.danktronics.jdca.Constants;
 import org.danktronics.jdca.JDCA;
 import org.danktronics.jdca.entities.EventListener;
 import org.danktronics.jdca.entities.exceptions.LoginException;
 import org.danktronics.jdca.events.Event;
-import org.danktronics.jdca.events.PresenceUpdateEvent;
-import org.danktronics.jdca.events.ReadyEvent;
-import org.danktronics.jdca.rest.RequestHandler;
-import org.json.JSONException;
+import org.danktronics.jdca.requests.RequestHandler;
+import org.danktronics.jdca.requests.WebSocketClient;
 import org.json.JSONObject;
 
 import java.util.LinkedList;
@@ -22,6 +17,7 @@ import java.util.List;
 public class JDCAImpl implements JDCA {
     protected final OkHttpClient okHttpClient;
     protected final WebSocketFactory wsFactory;
+    protected final WebSocketClient wsClient;
 
     protected final String token;
     protected Status status = Status.DISCONNECTED;
@@ -34,38 +30,18 @@ public class JDCAImpl implements JDCA {
         this.okHttpClient = okHttpClient;
         this.requestHandler = new RequestHandler(this);
         this.listeners = new LinkedList<>();
+        this.wsClient = new WebSocketClient(this);
     }
 
-    public void connect() throws LoginException {
-        JDCA jdca = this;
+    public void login() throws LoginException {
         try {
-            String gatewayEndpoint = getGateway();
-            WebSocket ws = this.wsFactory.createSocket(gatewayEndpoint);
-            ws.addListener(new WebSocketAdapter() {
-                @Override
-                public void onTextMessage(WebSocket webSocket, String message) {
-                    try {
-                        JSONObject payload = new JSONObject(message);
-                        if (payload.getInt("op") == Constants.HELLO) {
-                            broadcastEvent(new ReadyEvent(jdca));
-                        } else if (payload.getInt("op") == Constants.EVENT) {
-                            if (payload.getString("event").equals("PRESENCE_UPDATE")) {
-                                broadcastEvent(new PresenceUpdateEvent(jdca, new UserImpl(payload.getJSONObject("user"))));
-                            }
-                        }
-                    } catch(JSONException error) {
-                        error.printStackTrace();
-                    }
-                }
-            });
-            ws.connect();
-            ws.sendText(new JSONObject().put("op", Constants.IDENTIFY).put("token", this.token).toString());
+            this.wsClient.connect(getGateway());
         } catch(Exception error) {
-            throw new LoginException(error.toString());
+            throw new LoginException(error);
         }
     }
 
-    private void broadcastEvent(Event event) {
+    public void broadcastEvent(Event event) {
         listeners.forEach(eventListener -> eventListener.onEvent(event));
     }
 
@@ -73,7 +49,7 @@ public class JDCAImpl implements JDCA {
         return this.status;
     }
 
-    protected void setStatus(Status status) {
+    public void setStatus(Status status) {
         this.status = status;
     }
 
@@ -87,6 +63,15 @@ public class JDCAImpl implements JDCA {
 
     public OkHttpClient getOkHttpClient() {
         return okHttpClient;
+    }
+
+    public WebSocketFactory getWSFactory() {
+        return wsFactory;
+    }
+
+    public WebSocketClient getWSClient() {
+        if (wsClient == null) throw new IllegalStateException("Called getWSClient before logging in");
+        return wsClient;
     }
 
     public String getGateway() throws Exception {

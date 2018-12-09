@@ -5,7 +5,7 @@ import org.danktronics.jdca.entities.exceptions.LoginException;
 public class Main {
     public static void main(String[] args) {
         try {
-            JDCA jdca = new JDCABuilder("Yourtokenhere")
+            JDCA jdca = new JDCABuilder("token")
                     .addListener(new EventHandler())
                     .build();
         } catch(LoginException error) {

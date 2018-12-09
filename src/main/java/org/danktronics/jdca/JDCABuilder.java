@@ -38,7 +38,7 @@ public class JDCABuilder {
     public JDCA build() throws LoginException {
         JDCAImpl jdca = new JDCAImpl(token, new WebSocketFactory(), new OkHttpClient.Builder().build());
         listeners.forEach(jdca::addEventListener);
-        jdca.connect();
+        jdca.login();
         return jdca;
     }
 }

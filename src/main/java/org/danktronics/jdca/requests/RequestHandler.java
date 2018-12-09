@@ -1,4 +1,4 @@
-package org.danktronics.jdca.rest;
+package org.danktronics.jdca.requests;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
