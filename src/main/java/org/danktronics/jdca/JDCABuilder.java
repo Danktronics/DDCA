@@ -3,6 +3,7 @@ package org.danktronics.jdca;
 import com.neovisionaries.ws.client.WebSocketFactory;
 import okhttp3.OkHttpClient;
 import org.danktronics.jdca.entities.EventListener;
+import org.danktronics.jdca.entities.exceptions.LoginException;
 import org.danktronics.jdca.entities.impl.JDCAImpl;
 import org.danktronics.jdca.utils.Checks;
 
@@ -13,7 +14,7 @@ import java.util.List;
 
 public class JDCABuilder {
     private final String token;
-    private final List<Object> listeners;
+    private final List<EventListener> listeners;
 
     public JDCABuilder(String token) {
         this.token = token;
@@ -34,9 +35,10 @@ public class JDCABuilder {
         return this;
     }
 
-    public JDCA build() {
+    public JDCA build() throws LoginException {
         JDCAImpl jdca = new JDCAImpl(token, new WebSocketFactory(), new OkHttpClient.Builder().build());
         listeners.forEach(jdca::addEventListener);
+        jdca.connect();
         return jdca;
     }
 }
