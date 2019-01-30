@@ -5,8 +5,10 @@ import com.neovisionaries.ws.client.WebSocketAdapter;
 import com.neovisionaries.ws.client.WebSocketException;
 import org.danktronics.jdca.Constants;
 import org.danktronics.jdca.JDCA;
+import org.danktronics.jdca.entities.exceptions.LoginException;
 import org.danktronics.jdca.entities.impl.JDCAImpl;
 import org.danktronics.jdca.entities.impl.UserImpl;
+import org.danktronics.jdca.events.ErrorEvent;
 import org.danktronics.jdca.events.PresenceUpdateEvent;
 import org.danktronics.jdca.events.ReadyEvent;
 import org.danktronics.jdca.events.UnknownEvent;
@@ -32,7 +34,9 @@ public class WebSocketClient {
             this.webSocket = this.jdca.getWSFactory().createSocket(url);
             this.registerListeners();
             webSocket.connect();
+            jdca.setStatus(JDCA.Status.CONNECTING);
             webSocket.sendText(new JSONObject().put("op", Constants.IDENTIFY).put("token", jdca.getToken()).toString());
+            jdca.setStatus(JDCA.Status.LOGGING_IN);
         } catch(IOException | WebSocketException error) {
             throw new IllegalStateException(error);
         }
@@ -47,10 +51,14 @@ public class WebSocketClient {
                     System.out.println(payload);
                     switch (payload.getInt("op")) {
                         case Constants.HELLO:
+                            jdca.setStatus(JDCA.Status.CONNECTED);
                             jdca.broadcastEvent(new ReadyEvent(jdca));
                             break;
                         case Constants.EVENT:
                             handleEvent(payload);
+                            break;
+                        case Constants.INVALID:
+                            if (jdca.getStatus() == JDCA.Status.LOGGING_IN) jdca.broadcastEvent(new ErrorEvent(getJDCA(), new LoginException("Gateway reported invalid token")));
                             break;
                         default:
                             jdca.broadcastEvent(new UnknownEvent(jdca, payload));
