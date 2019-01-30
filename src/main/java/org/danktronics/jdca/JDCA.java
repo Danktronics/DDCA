@@ -7,7 +7,8 @@ public interface JDCA {
 
     enum Status {
         CONNECTING,
-        DISCONNECTED,
-        CONNECTED
+        LOGGING_IN,
+        CONNECTED,
+        DISCONNECTED
     }
 }
